@@ -1,1 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Spider-Man: The One and Only VR Game</title>
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        font-family: Arial, Helvetica, sans-serif;
+        background: #020617;
+      }
 
+      #ui {
+        position: fixed;
+        top: 12px;
+        left: 12px;
+        z-index: 10;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+
+      button {
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        background: rgba(15, 23, 42, 0.8);
+        color: #f8fafc;
+        padding: 8px 10px;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+
+      #copy-status {
+        color: #e2e8f0;
+        font-size: 0.9rem;
+        text-shadow: 0 1px 1px rgba(0, 0, 0, 0.5);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="ui">
+      <button id="music-toggle">Play music</button>
+      <button id="swing-toggle">Toggle swing mode</button>
+      <button id="copy-code">Copy project code</button>
+      <span id="copy-status" aria-live="polite"></span>
+    </div>
+
+    <a-scene id="scene" renderer="colorManagement: true; physicallyCorrectLights: true" vr-mode-ui="enabled: true">
+      <a-entity id="world"></a-entity>
+      <a-entity id="rig"></a-entity>
+      <a-assets>
+        <audio id="city-audio" preload="auto" src="https://cdn.aframe.io/basic-guide/audio/backgroundnoise.wav"></audio>
+      </a-assets>
+    </a-scene>
+
+    <script src="./tile.js"></script>
+    <script src="./map.js"></script>
+    <script src="./gradient.js"></script>
+    <script src="./player.js"></script>
+    <script src="./hand.js"></script>
+    <script src="./radio.js"></script>
+    <script src="./web.js"></script>
+  </body>
+</html>
