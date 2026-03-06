@@ -1,6 +1,6 @@
 # Spider-Man: The One and Only VR Game
 
-A lightweight A-Frame project with a city sandbox that you can move around in desktop mode or VR mode.
+A lightweight A-Frame project with a city sandbox, a full-body Spider-Man-inspired avatar, and movement support for desktop and VR.
 
 ## Run locally
 
@@ -15,6 +15,8 @@ Then open `http://localhost:8000`.
 ## Controls
 
 - **Desktop**: click scene, then use mouse + WASD.
-- **VR**: enter VR mode and use controller pointers.
+- **VR joystick**: use your controller thumbstick/joystick to move around.
+- **Full-body avatar**: look down to see legs/arms, with walking animation while moving.
 - **Play music**: toggles ambient city sound.
-- **Toggle swing mode**: increases movement acceleration.
+- **Toggle swing mode**: boosts movement speed for keyboard + joystick.
+- **Copy project code**: copies all source files into your clipboard 
