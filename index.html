@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Spider-Man VR</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a0f;color:#fff;font-family:'Arial',sans-serif;overflow:hidden;height:100vh}
+.screen{position:fixed;inset:0;display:none;z-index:10}
+.screen.active{display:flex}
+
+/* ── MAIN MENU ── */
+#sMenu{flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 30%,#1a0010 0%,#0a0005 60%,#000 100%)}
+#menuBg{position:absolute;inset:0;pointer-events:none;z-index:0}
+#menuContent{position:relative;z-index:5;display:flex;flex-direction:column;align-items:center;gap:24px;width:100%}
+.spiderLogo{font-size:72px;font-weight:900;letter-spacing:6px;color:#e8001c;text-shadow:0 0 40px rgba(232,0,28,.6),0 0 80px rgba(232,0,28,.3);line-height:1}
+.spiderSub{font-size:14px;letter-spacing:8px;color:rgba(255,255,255,.5);text-transform:uppercase;margin-top:-8px}
+.menuBtns{display:flex;flex-direction:column;gap:10px;width:320px;margin-top:16px}
+.mBtn{padding:14px 28px;font-size:15px;font-weight:700;letter-spacing:3px;text-transform:uppercase;border:none;border-radius:4px;cursor:pointer;font-family:'Arial',sans-serif;transition:all .15s;text-align:left;position:relative;overflow:hidden}
+.mBtn.primary{background:linear-gradient(135deg,#e8001c,#a80010);color:#fff}
+.mBtn.secondary{background:rgba(255,255,255,.08);color:rgba(255,255,255,.8);border:1px solid rgba(255,255,255,.15)}
+.mBtn:hover{transform:translateX(6px);filter:brightness(1.15)}
+.mBtn .btnArrow{position:absolute;right:16px;top:50%;transform:translateY(-50%);opacity:.5;font-size:18px}
+.charSelect{display:flex;gap:14px;margin-top:8px}
+.charBtn{width:90px;height:110px;background:rgba(255,255,255,.06);border:2px solid rgba(255,255,255,.15);border-radius:8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;transition:all .18s;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,.6)}
+.charBtn:hover,.charBtn.active{border-color:#e8001c;background:rgba(232,0,28,.12);color:#fff}
+.charBtn .charIcon{font-size:36px}
+.charBtn .charName{font-size:9px;letter-spacing:1px}
+
+/* ── MISSION SELECT ── */
+#sMissions{flex-direction:column;background:#080808}
+.missionTop{display:flex;align-items:center;gap:16px;padding:14px 22px;background:rgba(0,0,0,.8);border-bottom:1px solid rgba(255,255,255,.07);flex-shrink:0}
+.backBtn{padding:7px 15px;background:rgba(255,255,255,.07);border:1px solid rgba(232,0,28,.3);border-radius:4px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#e8001c;cursor:pointer;font-family:'Arial',sans-serif}
+.missionTitle{font-size:18px;font-weight:900;letter-spacing:3px;color:#fff;text-transform:uppercase}
+.missionBody{display:flex;flex:1;overflow:hidden}
+.missionTabs{width:180px;background:rgba(0,0,0,.5);border-right:1px solid rgba(255,255,255,.06);display:flex;flex-direction:column;padding:12px 0;gap:2px;flex-shrink:0}
+.mTab{padding:10px 16px;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.45);cursor:pointer;transition:all .15s;border-left:3px solid transparent}
+.mTab:hover,.mTab.active{color:#fff;background:rgba(232,0,28,.1);border-left-color:#e8001c}
+.missionList{flex:1;overflow-y:auto;padding:16px}
+.missionGroup{margin-bottom:20px}
+.mGroupTitle{font-size:9px;font-weight:700;letter-spacing:3px;color:rgba(255,255,255,.3);text-transform:uppercase;margin-bottom:10px}
+.missionCard{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:6px;padding:12px 16px;margin-bottom:8px;cursor:pointer;transition:all .18s;display:flex;align-items:center;gap:14px}
+.missionCard:hover{border-color:#e8001c;background:rgba(232,0,28,.08);transform:translateX(4px)}
+.missionCard.locked{opacity:.4;cursor:not-allowed}
+.mCardIcon{font-size:28px;flex-shrink:0;width:44px;text-align:center}
+.mCardInfo{flex:1}
+.mCardName{font-size:13px;font-weight:700;letter-spacing:.5px;margin-bottom:3px}
+.mCardDesc{font-size:10px;color:rgba(255,255,255,.45);line-height:1.4}
+.mCardVillain{font-size:9px;color:#e8001c;margin-top:4px;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.mCardBadge{font-size:9px;padding:2px 6px;border-radius:2px;letter-spacing:1px;font-weight:700;text-transform:uppercase;flex-shrink:0}
+.badge-story{background:rgba(232,0,28,.3);color:#ff6070}
+.badge-free{background:rgba(26,144,217,.3);color:#60b0ff}
+.badge-stealth{background:rgba(50,200,50,.2);color:#80ff80}
+.badge-boss{background:rgba(255,150,0,.2);color:#ffaa44}
+
+/* ── APARTMENT SELECT ── */
+#sApartments{flex-direction:column;background:#080808}
+.aptGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;padding:20px}
+.aptCard{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;overflow:hidden;cursor:pointer;transition:all .18s}
+.aptCard:hover{border-color:#e8001c;transform:translateY(-3px)}
+.aptCardImg{height:100px;display:flex;align-items:center;justify-content:center;font-size:48px}
+.aptCardBody{padding:10px 12px}
+.aptCardName{font-size:13px;font-weight:700;margin-bottom:3px}
+.aptCardDesc{font-size:10px;color:rgba(255,255,255,.45)}
+
+/* ── GAME ── */
+#gameCanvas{position:fixed;inset:0;z-index:1;display:none}
+#gameHUD{position:fixed;inset:0;z-index:20;pointer-events:none;display:none}
+#xhair{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:20px;height:20px}
+.xl{position:absolute;background:rgba(255,255,255,.8)}
+.xh{width:8px;height:1.5px;top:50%;margin-top:-.75px}
+.xh.l{left:0}.xh.r{right:0}
+.xv{width:1.5px;height:8px;left:50%;margin-left:-.75px}
+.xv.t{top:0}.xv.b{bottom:0}
+#healthBar{position:absolute;bottom:20px;left:18px;width:220px}
+.statRow{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.statIcon{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;flex-shrink:0}
+.hpIcon{background:#e8001c}.webIcon{background:#1a90d9}
+.statBars{flex:1}
+.sBLabel{font-size:8px;letter-spacing:2px;color:rgba(255,255,255,.4);text-transform:uppercase;margin-bottom:2px}
+.sBTrack{height:6px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden}
+#hpFill{height:100%;background:linear-gradient(90deg,#e8001c,#ff4455);border-radius:3px;transition:width .12s}
+#webFill{height:100%;background:linear-gradient(90deg,#1a90d9,#60d0ff);border-radius:3px;transition:width .12s}
+.statVal{font-size:18px;font-weight:900;min-width:28px;text-align:right}
+#topHUD{position:absolute;top:14px;left:50%;transform:translateX(-50%);display:flex;gap:24px;background:rgba(0,0,0,.6);padding:6px 20px;border-radius:4px;border:1px solid rgba(255,255,255,.07)}
+.topStat{font-size:9px;color:rgba(255,255,255,.4);letter-spacing:2px;text-transform:uppercase;text-align:center}
+.topStat span{display:block;font-size:22px;font-weight:900;color:#fff}
+#missionHUD{position:absolute;top:14px;right:14px;width:220px;background:rgba(0,0,0,.65);border:1px solid rgba(232,0,28,.3);border-radius:6px;padding:10px 14px}
+.mHUDLabel{font-size:8px;letter-spacing:3px;color:#e8001c;text-transform:uppercase;margin-bottom:4px}
+.mHUDName{font-size:13px;font-weight:700;color:#fff;margin-bottom:3px}
+.mHUDObj{font-size:10px;color:rgba(255,255,255,.55);line-height:1.4}
+#swingTip{position:absolute;bottom:110px;left:50%;transform:translateX(-50%);font-size:11px;color:#e8001c;letter-spacing:2px;opacity:0;background:rgba(0,0,0,.7);padding:5px 16px;border-radius:3px;pointer-events:none;transition:opacity .2s;white-space:nowrap;border:1px solid rgba(232,0,28,.3)}
+#killFeed{position:absolute;top:54px;left:14px;width:250px}
+.kfe{font-size:10px;color:#ff6070;background:rgba(0,0,0,.6);padding:3px 10px;margin-bottom:2px;border-left:2px solid #e8001c;animation:kfade 3.5s forwards}
+@keyframes kfade{0%,70%{opacity:1}100%{opacity:0}}
+#dmgFlash{position:absolute;inset:0;background:radial-gradient(ellipse,transparent 30%,rgba(232,0,28,.5) 100%);opacity:0;pointer-events:none;transition:opacity .08s}
+#minimap{position:absolute;top:14px;left:14px;width:80px;height:80px;border-radius:50%;overflow:hidden;border:2px solid rgba(232,0,28,.4);background:rgba(0,8,18,.85)}
+#mmCanvas{width:80px;height:80px}
+#webCounter{position:absolute;bottom:20px;right:18px;text-align:right}
+#webLabel{font-size:9px;letter-spacing:2px;color:#1a90d9;text-transform:uppercase;margin-bottom:2px}
+#webNum{font-size:40px;font-weight:900;color:#fff;line-height:1}
+#comboHUD{position:absolute;top:50%;right:20px;transform:translateY(-50%);text-align:right;opacity:0;transition:opacity .3s}
+.comboNum{font-size:48px;font-weight:900;color:#f5c518;text-shadow:0 0 20px rgba(245,197,24,.5);line-height:1}
+.comboLabel{font-size:9px;letter-spacing:3px;color:rgba(255,255,255,.5);text-transform:uppercase}
+
+/* ── RESULT ── */
+#sResult{flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.9)}
+#resultTitle{font-size:58px;font-weight:900;letter-spacing:6px;text-transform:uppercase;margin-bottom:10px}
+#resultStats{display:flex;gap:32px;margin-bottom:28px}
+.rStat{text-align:center}
+.rVal{font-size:36px;font-weight:900;color:#fff}
+.rLabel{font-size:9px;letter-spacing:3px;color:rgba(255,255,255,.4);text-transform:uppercase}
+.resultBtn{padding:13px 44px;font-size:14px;font-weight:900;letter-spacing:3px;text-transform:uppercase;background:linear-gradient(180deg,#e8001c,#a80010);color:#fff;border:none;border-radius:4px;cursor:pointer;font-family:'Arial',sans-serif}
+.resultBtn:hover{transform:scale(1.03)}
+
+#toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#1a0010,#0a0005);border:2px solid #e8001c;padding:12px 28px;border-radius:6px;font-size:13px;font-weight:700;color:#fff;z-index:9999;letter-spacing:1px;opacity:0;transition:opacity .3s;pointer-events:none;box-shadow:0 0 20px rgba(232,0,28,.3)}
+#vrBtn{position:fixed;bottom:18px;right:18px;z-index:9999;font-size:11px;font-weight:700;letter-spacing:3px;padding:9px 18px;border:1px solid #e8001c;color:#e8001c;background:rgba(0,0,0,.7);cursor:pointer;display:none;border-radius:3px;text-transform:uppercase;font-family:'Arial',sans-serif}
+#vrBtn:hover{background:#e8001c;color:#fff}
+#lh{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);font-size:9px;color:rgba(255,255,255,.2);letter-spacing:2px;pointer-events:none;z-index:9999}
+</style>
+</head>
+<body>
+
+<!-- MAIN MENU -->
+<div id="sMenu" class="screen active">
+  <canvas id="menuBg"></canvas>
+  <div id="menuContent">
+    <div class="spiderLogo">SPIDER-MAN</div>
+    <div class="spiderSub">VR — Ultimate Edition</div>
+    <div class="charSelect">
+      <div class="charBtn active" id="charPeter" onclick="selectChar('peter',this)">
+        <div class="charIcon">🕷️</div>
+        <div class="charName">Peter Parker</div>
+      </div>
+      <div class="charBtn" id="charMiles" onclick="selectChar('miles',this)">
+        <div class="charIcon">🕸️</div>
+        <div class="charName">Miles Morales</div>
+      </div>
+      <div class="charBtn" id="charMJ" onclick="selectChar('mj',this)">
+        <div class="charIcon">📸</div>
+        <div class="charName">Mary Jane</div>
+      </div>
+    </div>
+    <div class="menuBtns">
+      <button class="mBtn primary" onclick="showScreen('missions')">
+        STORY MODE <span class="btnArrow">▶</span>
+      </button>
+      <button class="mBtn secondary" onclick="startFreeRoam()">
+        FREE ROAM — SWING NYC <span class="btnArrow">▶</span>
+      </button>
+      <button class="mBtn secondary" onclick="showScreen('apartments')">
+        VISIT APARTMENTS <span class="btnArrow">▶</span>
+      </button>
+      <button class="mBtn secondary" onclick="showScreen('missions')">
+        STEALTH MISSIONS <span class="btnArrow">▶</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MISSION SELECT -->
+<div id="sMissions" class="screen">
+  <div class="missionTop">
+    <button class="backBtn" onclick="showScreen('menu')">← BACK</button>
+    <div class="missionTitle">Mission Select</div>
+    <div style="margin-left:auto;font-size:10px;color:rgba(255,255,255,.35);letter-spacing:2px" id="selectedCharLabel">PLAYING AS: PETER PARKER</div>
+  </div>
+  <div class="missionBody">
+    <div class="missionTabs">
+      <div class="mTab active" onclick="setMissionTab('story',this)">📖 STORY</div>
+      <div class="mTab" onclick="setMissionTab('insomniac',this)">🎮 INSOMNIAC</div>
+      <div class="mTab" onclick="setMissionTab('amazing',this)">🎬 AMAZING 2</div>
+      <div class="mTab" onclick="setMissionTab('stealth',this)">🥷 STEALTH</div>
+      <div class="mTab" onclick="setMissionTab('freeroam',this)">🌆 FREE ROAM</div>
+      <div class="mTab" onclick="setMissionTab('boss',this)">⚡ BOSS RUSH</div>
+    </div>
+    <div class="missionList" id="missionList"></div>
+  </div>
+</div>
+
+<!-- APARTMENTS -->
+<div id="sApartments" class="screen">
+  <div class="missionTop">
+    <button class="backBtn" onclick="showScreen('menu')">← BACK</button>
+    <div class="missionTitle">Apartments — New York City</div>
+  </div>
+  <div class="aptGrid" id="aptGrid"></div>
+</div>
+
+<!-- GAME -->
+<canvas id="gameCanvas"></canvas>
+<div id="gameHUD">
+  <div id="xhair">
+    <div class="xl xh l"></div><div class="xl xh r"></div>
+    <div class="xl xv t"></div><div class="xl xv b"></div>
+  </div>
+  <div id="healthBar">
+    <div class="statRow">
+      <div class="statIcon hpIcon">♥</div>
+      <div class="statBars"><div class="sBLabel">Health</div><div class="sBTrack"><div id="hpFill" style="width:100%"></div></div></div>
+      <div class="statVal" id="hpVal">100</div>
+    </div>
+    <div class="statRow">
+      <div class="statIcon webIcon">🕸</div>
+      <div class="statBars"><div class="sBLabel">Web Fluid</div><div class="sBTrack"><div id="webFill" style="width:100%"></div></div></div>
+      <div class="statVal" id="webVal">100</div>
+    </div>
+  </div>
+  <div id="topHUD">
+    <div class="topStat">COMBO <span id="comboN">0</span></div>
+    <div class="topStat">ENEMIES <span id="enemiesN">0</span></div>
+    <div class="topStat">SCORE <span id="scoreN">0</span></div>
+  </div>
+  <div id="missionHUD">
+    <div class="mHUDLabel">Current Mission</div>
+    <div class="mHUDName" id="mHUDName">Free Roam</div>
+    <div class="mHUDObj" id="mHUDObj">Swing around New York City</div>
+  </div>
+  <div id="swingTip"></div>
+  <div id="killFeed"></div>
+  <div id="dmgFlash"></div>
+  <div id="minimap"><canvas id="mmCanvas" width="80" height="80"></canvas></div>
+  <div id="webCounter">
+    <div id="webLabel">WEB SHOTS</div>
+    <div id="webNum">∞</div>
+  </div>
+  <div id="comboHUD">
+    <div class="comboNum" id="comboDisplay">0</div>
+    <div class="comboLabel">HIT COMBO</div>
+  </div>
+</div>
+
+<!-- RESULT -->
+<div id="sResult" class="screen">
+  <div id="resultTitle"></div>
+  <div id="resultStats">
+    <div class="rStat"><div class="rVal" id="rCombo">0</div><div class="rLabel">Best Combo</div></div>
+    <div class="rStat"><div class="rVal" id="rDefeated">0</div><div class="rLabel">Defeated</div></div>
+    <div class="rStat"><div class="rVal" id="rTime">0s</div><div class="rLabel">Time</div></div>
+  </div>
+  <button class="resultBtn" onclick="showScreen('menu')">BACK TO MENU</button>
+</div>
+
+<div id="toast"></div>
+<button id="vrBtn">ENTER VR</button>
+<div id="lh">DRAG to look · CLICK to lock mouse · SPACE = web shoot</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="web.js"></script>
+<script src="missions.js"></script>
+<script src="city.js"></script>
+<script src="swing.js"></script>
+<script src="villains.js"></script>
+<script src="characters.js"></script>
+<script src="vr.js"></script>
+</body>
+</html>
