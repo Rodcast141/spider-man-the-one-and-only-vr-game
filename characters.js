@@ -1,6 +1,4 @@
-
 Copy
-
 // characters.js — Spider-Man suit mesh, NPC characters (MJ, Miles, Ned, Stan Lee, Uncle Ben, etc.)
  
 function buildSpiderManMesh(){
