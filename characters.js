@@ -1,68 +1,71 @@
-// characters.js — Spider-Man suit mesh, NPC characters (MJ, Miles, Ned, Stan Lee, Uncle Ben, etc.)
 
+Copy
+
+// characters.js — Spider-Man suit mesh, NPC characters (MJ, Miles, Ned, Stan Lee, Uncle Ben, etc.)
+ 
 function buildSpiderManMesh(){
   var g=new THREE.Group();
   var M=function(c,e){ return new THREE.MeshLambertMaterial({color:c,emissive:e?new THREE.Color(e):undefined}); };
-
+ 
   var suitColor = selectedCharacter==='miles' ? 0x111133 : 0xe8001c;
   var webColor  = selectedCharacter==='miles' ? 0xcc0000 : 0x0000cc;
   var eyeColor  = selectedCharacter==='miles' ? 0xffffff : 0xe8f0ff;
-
+ 
   // Torso
   var torso=new THREE.Mesh(new THREE.BoxGeometry(0.7,0.92,0.46),M(suitColor));
   torso.position.set(0,1.1,0);torso.castShadow=true;g.add(torso);
-
+ 
   // Web pattern (chest spider)
   var spider=new THREE.Mesh(new THREE.PlaneGeometry(0.5,0.5),M(webColor,0x000022));
   spider.position.set(0,1.25,0.235);g.add(spider);
-
+ 
   // Head
   var head=new THREE.Mesh(new THREE.BoxGeometry(0.56,0.54,0.5),M(suitColor));
   head.position.set(0,1.86,0);head.castShadow=true;g.add(head);
-
+ 
   // Eyes (big Spider-Man lenses)
   var eyeM=new THREE.MeshLambertMaterial({color:eyeColor,emissive:new THREE.Color(0x224488)});
   [-0.16,0.16].forEach(function(ex){
     var eye=new THREE.Mesh(new THREE.BoxGeometry(0.2,0.14,0.08),eyeM);
     eye.position.set(ex,1.9,0.25);g.add(eye);
   });
-
+ 
   // Legs
   var legMat=M(suitColor);
   var legL=new THREE.Mesh(new THREE.BoxGeometry(0.28,0.82,0.3),legMat);
   legL.position.set(-0.2,0.5,0);legL.castShadow=true;g.add(legL);
   var legR=new THREE.Mesh(new THREE.BoxGeometry(0.28,0.82,0.3),legMat);
   legR.position.set(0.2,0.5,0);legR.castShadow=true;g.add(legR);
-
+ 
   // Boots
   var bootMat=M(webColor);
   var bL=new THREE.Mesh(new THREE.BoxGeometry(0.3,0.22,0.38),bootMat);bL.position.set(-0.2,0.12,0.04);g.add(bL);
   var bR=new THREE.Mesh(new THREE.BoxGeometry(0.3,0.22,0.38),bootMat);bR.position.set(0.2,0.12,0.04);g.add(bR);
-
+ 
   // Arms
   var armL=new THREE.Mesh(new THREE.BoxGeometry(0.25,0.7,0.27),M(suitColor));
   armL.position.set(-0.48,1.06,0);armL.castShadow=true;g.add(armL);
   var armR=new THREE.Mesh(new THREE.BoxGeometry(0.25,0.7,0.27),M(suitColor));
   armR.position.set(0.48,1.06,0);armR.castShadow=true;g.add(armR);
-
+ 
   // Gloves
   var gloveM=M(webColor);
   var gL=new THREE.Mesh(new THREE.BoxGeometry(0.24,0.22,0.26),gloveM);gL.position.set(-0.48,0.68,0);g.add(gL);
   var gR=new THREE.Mesh(new THREE.BoxGeometry(0.24,0.22,0.26),gloveM);gR.position.set(0.48,0.68,0);g.add(gR);
-
+ 
   // Miles' electrical aura
   if(selectedCharacter==='miles'){
     var aura=new THREE.PointLight(0x0044ff,0.5,4);
     aura.position.set(0,1,0);g.add(aura);
   }
-
+ 
   g._legL=legL;g._legR=legR;g._armL=armL;g._armR=armR;
   return g;
 }
-
+ 
 // ── NPC CHARACTERS ──
 var npcCharacters=[];
-
+ 
 function buildMJCharacter(x,z){
   var g=new THREE.Group();
   var M=function(c){return new THREE.MeshLambertMaterial({color:c});};
@@ -84,7 +87,7 @@ function buildMJCharacter(x,z){
   g.position.set(x,0,z);scene.add(g);
   npcCharacters.push({name:'Mary Jane Watson',mesh:g,pos:new THREE.Vector3(x,0,z)});
 }
-
+ 
 function buildMilesNPCCharacter(x,z){
   var g=new THREE.Group();
   var M=function(c){return new THREE.MeshLambertMaterial({color:c});};
@@ -101,7 +104,7 @@ function buildMilesNPCCharacter(x,z){
   g.position.set(x,0,z);scene.add(g);
   npcCharacters.push({name:'Miles Morales',mesh:g,pos:new THREE.Vector3(x,0,z)});
 }
-
+ 
 function buildNedCharacter(x,z){
   var g=new THREE.Group();
   var M=function(c){return new THREE.MeshLambertMaterial({color:c});};
@@ -122,7 +125,7 @@ function buildNedCharacter(x,z){
   g.position.set(x,0,z);scene.add(g);
   npcCharacters.push({name:'Ned Leeds',mesh:g,pos:new THREE.Vector3(x,0,z)});
 }
-
+ 
 function buildUncleCharacter(name,x,z,bodyColor,headColor){
   var g=new THREE.Group();
   var M=function(c){return new THREE.MeshLambertMaterial({color:c});};
@@ -137,7 +140,7 @@ function buildUncleCharacter(name,x,z,bodyColor,headColor){
   g.position.set(x,0,z);scene.add(g);
   npcCharacters.push({name:name,mesh:g,pos:new THREE.Vector3(x,0,z)});
 }
-
+ 
 function buildStanLeeCharacter(x,z){
   var g=new THREE.Group();
   var M=function(c){return new THREE.MeshLambertMaterial({color:c});};
@@ -161,7 +164,7 @@ function buildStanLeeCharacter(x,z){
   var stanLight=new THREE.PointLight(0xffdd44,0.6,8);
   stanLight.position.set(x,3,z);scene.add(stanLight);
 }
-
+ 
 // Spawn key NPCs near player start
 function spawnKeyNPCs(){
   buildMJCharacter(15,10);
