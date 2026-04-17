@@ -142,10 +142,10 @@ body{background:#0a0a0f;color:#fff;font-family:'Arial',sans-serif;overflow:hidde
       </div>
     </div>
     <div class="menuBtns">
-      <button class="mBtn primary" onclick="showScreen('missions')">
+      <button class="mBtn primary" onclick="launchApartment('peter',null)">
         STORY MODE <span class="btnArrow">▶</span>
       </button>
-      <button class="mBtn secondary" onclick="startFreeRoam()">
+      <button class="mBtn secondary" onclick="launchApartment('peter',{name:'Free Roam NYC',objective:'Swing around New York City',type:'freeroam'})">
         FREE ROAM — SWING NYC <span class="btnArrow">▶</span>
       </button>
       <button class="mBtn secondary" onclick="showScreen('apartments')">
@@ -241,6 +241,20 @@ body{background:#0a0a0f;color:#fff;font-family:'Arial',sans-serif;overflow:hidde
   <button class="resultBtn" onclick="showScreen('menu')">BACK TO MENU</button>
 </div>
 
+
+<!-- APARTMENT HUD -->
+<div id="aptHUD" style="position:fixed;inset:0;z-index:25;pointer-events:none;display:none">
+  <!-- Subtitle -->
+  <div id="aptSubtitle" style="position:absolute;top:18px;left:50%;transform:translateX(-50%);font-size:12px;color:rgba(255,255,255,.7);letter-spacing:2px;background:rgba(0,0,0,.6);padding:6px 20px;border-radius:3px;border:1px solid rgba(232,0,28,.2);text-align:center;max-width:600px;white-space:nowrap">Welcome home, Peter.</div>
+  <!-- Interact prompt -->
+  <div id="aptInteract" style="position:absolute;bottom:90px;left:50%;transform:translateX(-50%);font-size:12px;color:#f5c518;letter-spacing:2px;opacity:0;background:rgba(0,0,0,.7);padding:5px 18px;border-radius:3px;border:1px solid rgba(245,197,24,.4);white-space:nowrap;transition:opacity .2s"></div>
+  <!-- Suit indicator -->
+  <div id="aptSuitIndicator" style="position:absolute;top:18px;right:18px;font-size:11px;color:#e8001c;letter-spacing:2px;opacity:0;background:rgba(0,0,0,.6);padding:5px 12px;border-radius:3px;border:1px solid rgba(232,0,28,.4);transition:opacity .3s">🕷️ SUIT ON</div>
+  <!-- Character label -->
+  <div id="aptCharLabel" style="position:absolute;bottom:18px;left:18px;font-size:10px;color:rgba(255,255,255,.5);letter-spacing:2px">1=PETER · 2=MILES · 3=MJ</div>
+  <!-- TV nav hint -->
+  <div style="position:absolute;bottom:18px;right:18px;font-size:9px;color:rgba(255,255,255,.3);letter-spacing:1px">DRAG to look · E=interact · SPACE=jump out window</div>
+</div>
 <div id="toast"></div>
 <button id="vrBtn">ENTER VR</button>
 <div id="lh">DRAG to look · CLICK to lock mouse · SPACE = web shoot</div>
@@ -253,5 +267,6 @@ body{background:#0a0a0f;color:#fff;font-family:'Arial',sans-serif;overflow:hidde
 <script src="villains.js"></script>
 <script src="characters.js"></script>
 <script src="vr.js"></script>
+<script src="apartment.js"></script>
 </body>
 </html>
