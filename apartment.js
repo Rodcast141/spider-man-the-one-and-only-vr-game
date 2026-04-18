@@ -11,7 +11,7 @@ var aptState = {
 };
 
 // ── APARTMENT 3D SCENE ──
-var aptRenderer, aptScene, aptCamera;
+var aptRenderer, aptScene, aptCamera, aptCameraRig;
 var aptObjects = {};  // named objects in the apartment
 var tvScreen = null;
 var tvCanvas, tvCtx;
@@ -63,10 +63,13 @@ function launchApartment(charId, missionContext) {
   aptScene.background = new THREE.Color(0x1a1210);
   aptCamera = new THREE.PerspectiveCamera(80, innerWidth/innerHeight, 0.05, 200);
 
-  // Character spawn point (standing in living room)
-  aptCamera.position.set(0, 1.7, 2);
-  aptCamera.rotation.set(0, Math.PI, 0); // facing into room
-  aptScene.add(aptCamera);
+  // XR rig: scene > aptCameraRig (player position+yaw) > aptCamera (XR head pose)
+  aptCameraRig = new THREE.Group();
+  aptCameraRig.position.set(0, 0, 2); // standing in living room
+  aptScene.add(aptCameraRig);
+  aptCameraRig.add(aptCamera);
+  // Camera sits at eye height
+  aptCamera.position.set(0, 1.7, 0);
 
   // Lighting - warm apartment feel
   aptScene.add(new THREE.AmbientLight(0x4a3020, 0.8));
@@ -552,6 +555,7 @@ function drawTVScreen(mode, selectedIdx) {
 
 // ── APARTMENT LOOP ──
 var aptYaw=0, aptPitch=0;
+var aptSnapCd=false;
 var aptDragLook=false, aptLastMX=0, aptLastMY=0;
 var aptMouseLocked=false;
 var suitBoxY=suitBoxStartY;
@@ -576,9 +580,12 @@ function aptLoop(ts) {
     }
   }
 
-  // Camera look
-  aptCamera.rotation.set(aptPitch, Math.PI + aptYaw, 0, 'YXZ');
-  aptCamera.rotation.order='YXZ';
+  // Camera look — desktop mode only (VR headset controls camera directly)
+  if (!inVR) {
+    aptCameraRig.rotation.y = Math.PI + aptYaw;
+    aptCamera.rotation.x = aptPitch;
+    aptCamera.position.set(0, 1.7, 0);
+  }
 
   // Proximity checks
   checkAptProximity();
@@ -597,7 +604,9 @@ function aptLoop(ts) {
 var aptLastT=0;
 
 function checkAptProximity() {
-  var camPos=aptCamera.position;
+  // World position of camera
+  var camPos = aptCameraRig.position.clone();
+  if(!inVR) camPos.y = 1.7;
 
   // Near TV remote
   var rem=aptObjects.tvRemote;
@@ -852,6 +861,8 @@ async function enterVRForApt(){
     ctrl0.add(remVR);
     // VR input for apartment
     session.addEventListener('end',function(){ inVR=false; document.getElementById('vrBtn').textContent='ENTER VR'; });
+    // In VR: aptCameraRig positions the player, XR handles head rotation automatically
+    // No need to manually set camera rotation in VR — WebXR does it
     // Handle VR input in apt loop via xr session
     session.addEventListener('selectstart',function(e){
       // Trigger = interact / select TV
@@ -860,9 +871,60 @@ async function enterVRForApt(){
       else if(aptState.boxArrived&&!aptState.suitOn) openSuitBox();
     });
     session.addEventListener('squeezestart',function(e){
-      // Grip = exit through window/door
       if(aptState.suitOn) exitThroughWindow(false);
       else exitThroughFrontDoor();
+    });
+    // VR thumbstick movement for apartment walking
+    aptRenderer.setAnimationLoop(function(ts, frame) {
+      var dt = Math.min((ts-(aptLastT||ts))/1000, 0.05); aptLastT=ts;
+      // VR locomotion via input sources
+      if(frame && session.inputSources) {
+        session.inputSources.forEach(function(src){
+          if(!src.gamepad||src.handedness!=='left') return;
+          var gp=src.gamepad;
+          var sx=gp.axes.length>2?gp.axes[2]:(gp.axes[0]||0);
+          var sy=gp.axes.length>3?gp.axes[3]:(gp.axes[1]||0);
+          if(Math.abs(sx)>0.15||Math.abs(sy)>0.15){
+            // Move rig in direction of rig's facing
+            var spd=2.5;
+            aptCameraRig.position.x -= Math.sin(aptCameraRig.rotation.y)*sy*spd*dt;
+            aptCameraRig.position.z -= Math.cos(aptCameraRig.rotation.y)*sy*spd*dt;
+            aptCameraRig.position.x -= Math.cos(aptCameraRig.rotation.y)*sx*spd*dt;
+            aptCameraRig.position.z += Math.sin(aptCameraRig.rotation.y)*sx*spd*dt;
+            // Clamp to apartment bounds
+            aptCameraRig.position.x = Math.max(-3.5, Math.min(3.5, aptCameraRig.position.x));
+            aptCameraRig.position.z = Math.max(-4.5, Math.min(4.5, aptCameraRig.position.z));
+          }
+          // Right stick snap turn for apt
+          var rsx=gp.axes.length>2?0:(gp.axes[2]||0);
+          // handled via separate right controller below
+        });
+        session.inputSources.forEach(function(src){
+          if(!src.gamepad||src.handedness!=='right') return;
+          var gp=src.gamepad;
+          var rsx=gp.axes.length>2?gp.axes[2]:(gp.axes[0]||0);
+          if(Math.abs(rsx)>0.65 && !aptSnapCd) {
+            aptCameraRig.rotation.y += rsx>0 ? -Math.PI/4 : Math.PI/4;
+            aptSnapCd=true;
+            setTimeout(function(){ aptSnapCd=false; }, 280);
+          }
+        });
+      }
+      // Animate suit box
+      if(aptState.phase==='box_arriving' && suitBox){
+        suitBoxY = Math.max(1.2, suitBoxY-3*dt);
+        suitBox.position.y = suitBoxY;
+        suitBox.rotation.y += dt*0.5;
+        if(suitBoxY<=1.2&&!aptState.boxArrived){
+          aptState.boxArrived=true; aptState.phase='suit_prompt';
+          suitBox.rotation.y=0;
+          showAptNotif('Suit box landed! Squeeze left grip to open, or right grip to exit.');
+          if(!suitPromptShown){showSuitPrompt();suitPromptShown=true;}
+        }
+      }
+      checkAptProximity();
+      if(tvMenuOpen) drawTVScreen(tvMenuMode==='missions'?'missions':'menu', tvMenuIndex);
+      aptRenderer.render(aptScene, aptCamera);
     });
   }catch(err){ console.warn('VR apt error:',err); }
 }
