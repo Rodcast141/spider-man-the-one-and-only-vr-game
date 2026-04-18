@@ -122,23 +122,23 @@ body{background:#0a0a0f;color:#fff;font-family:'Arial',sans-serif;overflow:hidde
 <body>
 
 <!-- MAIN MENU -->
-<div id="sMenu" class="screen active">
+<div id="sMenu" class="screen">
   <canvas id="menuBg"></canvas>
   <div id="menuContent">
     <div class="spiderLogo">SPIDER-MAN</div>
     <div class="spiderSub">VR — Ultimate Edition</div>
     <div class="charSelect">
       <div class="charBtn active" id="charPeter" onclick="selectChar('peter',this)">
-        <div class="charIcon">🕷️</div>
+        <canvas id="charPortrait_peter" width="80" height="95" style="display:block;margin:0 auto;border-radius:4px"></canvas>
         <div class="charName">Peter Parker</div>
       </div>
       <div class="charBtn" id="charMiles" onclick="selectChar('miles',this)">
-        <div class="charIcon">🕸️</div>
+        <canvas id="charPortrait_miles" width="80" height="95" style="display:block;margin:0 auto;border-radius:4px"></canvas>
         <div class="charName">Miles Morales</div>
       </div>
       <div class="charBtn" id="charMJ" onclick="selectChar('mj',this)">
-        <div class="charIcon">📸</div>
-        <div class="charName">Mary Jane</div>
+        <canvas id="charPortrait_mj" width="80" height="95" style="display:block;margin:0 auto;border-radius:4px"></canvas>
+        <div class="charName">MJ (9 mo.)</div>
       </div>
     </div>
     <div class="menuBtns">
@@ -268,5 +268,16 @@ body{background:#0a0a0f;color:#fff;font-family:'Arial',sans-serif;overflow:hidde
 <script src="characters.js"></script>
 <script src="vr.js"></script>
 <script src="apartment.js"></script>
+<script>
+// Start portrait animations and auto-launch apartment
+window.addEventListener('load', function() {
+  // Draw animated character portraits
+  if(typeof animateMenuPortraits === 'function') animateMenuPortraits();
+  // Auto-launch directly into apartment — no menu needed
+  setTimeout(function() {
+    if(typeof launchApartment === 'function') launchApartment('peter', null);
+  }, 600);
+});
+</script>
 </body>
 </html>
