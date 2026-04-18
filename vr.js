@@ -1,190 +1,257 @@
-// city.js — NYC 3D city: skyscrapers, streets, apartments, landmarks, web anchor points
+// vr.js — WebXR VR support: web swinging in VR, controllers, haptics, TV remote
 
-var CITY_SIZE = 1200;
-var webAnchors = []; // points in 3D space Spider-Man can attach webs to
+var inVR=false;
+var vrCtrl0=null,vrCtrl1=null; // left, right
+var vrGrip0=false,vrGrip1=false,vrTurnCd=0;
+var vrTvRemote=null;
 
-function buildCity() {
-  // ── GROUND / STREETS ──
-  var groundMat = new THREE.MeshLambertMaterial({color:0x1a1a1a});
-  var ground = new THREE.Mesh(new THREE.PlaneGeometry(CITY_SIZE,CITY_SIZE,1,1), groundMat);
-  ground.rotation.x = -Math.PI/2; ground.position.y = 0; ground.receiveShadow=true; scene.add(ground);
-
-  // Street grid lines
-  var lineMat = new THREE.MeshBasicMaterial({color:0xffffff, opacity:0.04, transparent:true});
-  for(var x=-600;x<=600;x+=60){
-    var lineG=new THREE.PlaneGeometry(2,CITY_SIZE);
-    var line=new THREE.Mesh(lineG,lineMat);
-    line.rotation.x=-Math.PI/2; line.position.set(x,0.05,0); scene.add(line);
+// ── TV REMOTE MESH (grabbable in VR) ──
+function buildTVRemote(){
+  var g=new THREE.Group();
+  var M=function(c){return new THREE.MeshLambertMaterial({color:c});};
+  var body=new THREE.Mesh(new THREE.BoxGeometry(0.08,0.04,0.22),M(0x111111));
+  g.add(body);
+  // Buttons
+  var buttonColors=[0xe8001c,0x22aa22,0x2222cc,0xffaa00];
+  for(var i=0;i<4;i++){
+    var btn=new THREE.Mesh(new THREE.CylinderGeometry(0.012,0.012,0.008,8),new THREE.MeshLambertMaterial({color:buttonColors[i]}));
+    btn.position.set((i%2-0.5)*0.03,(0.025),(i<2?-0.04:0.04));g.add(btn);
   }
-  for(var z=-600;z<=600;z+=60){
-    var lineG2=new THREE.PlaneGeometry(CITY_SIZE,2);
-    var line2=new THREE.Mesh(lineG2,lineMat);
-    line2.rotation.x=-Math.PI/2; line2.position.set(0,0.05,z); scene.add(line2);
+  return g;
+}
+
+// ── VR CONTROLLER HAND MODEL ──
+function buildVRHand(color){
+  var g=new THREE.Group();
+  var M=function(c){return new THREE.MeshLambertMaterial({color:c});};
+  var palm=new THREE.Mesh(new THREE.BoxGeometry(0.07,0.025,0.09),M(color));
+  palm.position.set(0,0,-0.02);g.add(palm);
+  for(var i=0;i<4;i++){
+    var finger=new THREE.Mesh(new THREE.BoxGeometry(0.013,0.022,0.044),M(color));
+    finger.position.set(-0.025+i*0.017,0.012,-0.071);g.add(finger);
   }
+  var thumb=new THREE.Mesh(new THREE.BoxGeometry(0.022,0.02,0.032),M(color));
+  thumb.position.set(-0.04,0.008,-0.018);thumb.rotation.z=0.4;g.add(thumb);
+  return g;
+}
 
-  // ── SKYSCRAPERS (Manhattan style) ──
-  var buildings = [
-    // Downtown / Financial District
-    {x:0,z:0,w:22,d:22,h:280,c:0x1a2035,name:'Empire State'},
-    {x:80,z:-60,w:18,d:18,h:180,c:0x1e2a3a},{x:-80,z:-60,w:16,d:16,h:200,c:0x152030},
-    {x:120,z:40,w:20,d:18,h:160,c:0x1c2838},{x:-120,z:40,w:22,d:20,h:190,c:0x1a2535},
-    {x:200,z:-100,w:25,d:22,h:220,c:0x1e2840,name:'One WTC'},
-    {x:-200,z:-100,w:20,d:18,h:175,c:0x1a2030},
-    {x:60,z:120,w:16,d:14,h:140,c:0x182030},{x:-60,z:120,w:18,d:16,h:155,c:0x1c2a38},
-    // Midtown
-    {x:300,z:0,w:28,d:24,h:250,c:0x1a2a40,name:'Chrysler Bldg'},
-    {x:-300,z:0,w:20,d:20,h:190,c:0x1e2838},{x:250,z:150,w:22,d:20,h:170,c:0x162028},
-    {x:-250,z:150,w:18,d:16,h:160,c:0x1a2535},{x:350,z:-150,w:24,d:22,h:210,c:0x1c2a38},
-    {x:-350,z:-150,w:20,d:18,h:185,c:0x182030},
-    // Upper Manhattan
-    {x:180,z:280,w:16,d:14,h:120,c:0x141e28},{x:-180,z:280,w:18,d:16,h:135,c:0x1a2535},
-    {x:0,z:300,w:22,d:20,h:145,c:0x1c2838},{x:100,z:250,w:14,d:14,h:110,c:0x162030},
-    {x:-100,z:250,w:16,d:14,h:125,c:0x1a2535},
-    // Brooklyn-ish
-    {x:400,z:200,w:20,d:18,h:95,c:0x1c2030},{x:-400,z:200,w:18,d:16,h:85,c:0x182028},
-    {x:450,z:-50,w:16,d:14,h:105,c:0x1a2535},{x:-450,z:-50,w:18,d:16,h:90,c:0x1e2a3a},
-    // Extra density
-    {x:140,z:-180,w:14,d:14,h:155,c:0x182030},{x:-140,z:-180,w:16,d:14,h:140,c:0x1c2838},
-    {x:220,z:-200,w:18,d:16,h:175,c:0x1a2535},{x:-220,z:-200,w:20,d:18,h:165,c:0x162030},
-    {x:330,z:100,w:16,d:14,h:130,c:0x1c2030},{x:-330,z:100,w:18,d:16,h:120,c:0x1a2535},
-    // Apartment blocks (shorter)
-    {x:160,z:180,w:28,d:22,h:40,c:0x2a2020},{x:-160,z:180,w:24,d:20,h:38,c:0x282020},
-    {x:240,z:80,w:26,d:22,h:45,c:0x202028},{x:-240,z:80,w:22,d:20,h:42,c:0x1e2030},
-  ];
+// ── WEB SHOOTER VISUAL (right hand VR) ──
+function buildWebShooterMesh(){
+  var g=new THREE.Group();
+  var M=function(c){return new THREE.MeshLambertMaterial({color:c});};
+  // Wrist device
+  var wrist=new THREE.Mesh(new THREE.BoxGeometry(0.07,0.028,0.1),M(0xe8001c));
+  g.add(wrist);
+  // Nozzle
+  var nozzle=new THREE.Mesh(new THREE.CylinderGeometry(0.012,0.016,0.04,8),M(0xcccccc));
+  nozzle.rotation.x=Math.PI/2;nozzle.position.set(0,0.015,0.06);g.add(nozzle);
+  // Web fluid light
+  var light=new THREE.PointLight(0xaaaaff,0.4,1.5);
+  light.position.set(0,0.02,0);g.add(light);
+  g._light=light;
+  return g;
+}
 
-  buildings.forEach(function(b){
-    // Main tower
-    var geo = new THREE.BoxGeometry(b.w, b.h, b.d);
-    var mat = new THREE.MeshLambertMaterial({color:b.c});
-    var mesh = new THREE.Mesh(geo, mat);
-    mesh.position.set(b.x, b.h/2, b.z);
-    mesh.castShadow=true; mesh.receiveShadow=true; scene.add(mesh);
+function initVR(){
+  if(!navigator.xr)return;
+  navigator.xr.isSessionSupported('immersive-vr').then(function(ok){
+    if(!ok)return;
+    var btn=document.getElementById('vrBtn');
+    btn.style.display='block';
+    btn.onclick=enterVR;
+  }).catch(function(){});
+}
 
-    // Roof details
-    var roofMat = new THREE.MeshLambertMaterial({color:0x0a1020});
-    var roof = new THREE.Mesh(new THREE.BoxGeometry(b.w+0.5,1.5,b.d+0.5), roofMat);
-    roof.position.set(b.x, b.h+0.75, b.z); scene.add(roof);
+async function enterVR(){
+  try{
+    var session=await navigator.xr.requestSession('immersive-vr',{requiredFeatures:['local-floor']});
+    await renderer.xr.setSession(session);
+    inVR=true;
+    document.getElementById('vrBtn').textContent='EXIT VR';
 
-    // Antenna on tall buildings
-    if(b.h > 150){
-      var antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.2,0.3,b.h*0.12,6), new THREE.MeshLambertMaterial({color:0x888888}));
-      antenna.position.set(b.x, b.h+b.h*0.06, b.z); scene.add(antenna);
-    }
+    // Left: hand + TV remote (can grab)
+    vrCtrl0=renderer.xr.getControllerGrip(0);
+    scene.add(vrCtrl0);
+    vrCtrl0.add(buildVRHand(0xf4c48a));
+    vrTvRemote=buildTVRemote();
+    vrTvRemote.position.set(0.05,-0.02,0.04);
+    vrCtrl0.add(vrTvRemote);
 
-    // Windows (glow)
-    var winMat = new THREE.MeshLambertMaterial({color:0x88aacc, emissive:new THREE.Color(0x112233), transparent:true, opacity:0.7});
-    var floors = Math.max(2, Math.floor(b.h/8));
-    var wcols  = Math.max(1, Math.floor(b.w/5));
-    for(var f=0;f<floors;f++){
-      for(var wi=0;wi<wcols;wi++){
-        if(Math.random()<0.25) continue; // some windows dark
-        var wx = b.x - b.w/2 + 2.5 + wi*(b.w-3)/wcols;
-        var wy = 4 + f*8;
-        if(wy > b.h-2) continue;
-        var win=new THREE.Mesh(new THREE.PlaneGeometry(1.8,3), winMat);
-        win.position.set(wx,wy,b.z+b.d/2+0.02); scene.add(win);
-        var win2=new THREE.Mesh(new THREE.PlaneGeometry(1.8,3), winMat);
-        win2.position.set(wx,wy,b.z-b.d/2-0.02); win2.rotation.y=Math.PI; scene.add(win2);
+    // Right: hand + web shooter
+    vrCtrl1=renderer.xr.getControllerGrip(1);
+    scene.add(vrCtrl1);
+    var rightHand=buildVRHand(0xf4c48a); vrCtrl1.add(rightHand);
+    var webShooter=buildWebShooterMesh(); vrCtrl1.add(webShooter);
+
+    // Aim ray
+    var ray=new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0),new THREE.Vector3(0,0,-50)]),
+      new THREE.LineBasicMaterial({color:0xcccccc,transparent:true,opacity:0.15})
+    );
+    vrCtrl1.add(ray);
+
+    // Build VR HUD (world-space canvas)
+    setupVRHUD();
+
+    session.addEventListener('end',function(){
+      inVR=false;
+      document.getElementById('vrBtn').textContent='ENTER VR';
+      removeVRHUD();
+    });
+
+    showToast('🥽 VR Ready! Right trigger = web swing · Left stick = move');
+  }catch(e){
+    console.warn('VR error:',e);
+    showToast('VR error — check headset connection');
+  }
+}
+
+// ── VR HUD ──
+var vrHUDMesh=null, vrHUDTex=null, vrHUDCtx=null;
+function setupVRHUD(){
+  var cvs=document.createElement('canvas');cvs.width=512;cvs.height=128;
+  vrHUDCtx=cvs.getContext('2d');
+  vrHUDTex=new THREE.CanvasTexture(cvs);
+  vrHUDMesh=new THREE.Mesh(
+    new THREE.PlaneGeometry(0.4,0.1),
+    new THREE.MeshBasicMaterial({map:vrHUDTex,transparent:true,depthTest:false})
+  );
+  vrHUDMesh.position.set(0,-0.12,-0.38);
+  vrHUDMesh.renderOrder=999;
+  camera.add(vrHUDMesh);
+  updateVRHUD();
+}
+function removeVRHUD(){if(vrHUDMesh){camera.remove(vrHUDMesh);vrHUDMesh=null;}}
+function updateVRHUD(){
+  if(!vrHUDCtx||!vrHUDTex)return;
+  var cx=vrHUDCtx,w=512,h=128;
+  cx.clearRect(0,0,w,h);
+  cx.fillStyle='rgba(0,0,0,.75)';cx.fillRect(0,0,w,h);
+  cx.fillStyle='#e8001c';cx.font='bold 11px Arial';cx.fillText('HP',6,16);
+  cx.fillStyle='rgba(255,255,255,.15)';cx.fillRect(30,4,180,14);
+  cx.fillStyle='#e8001c';cx.fillRect(30,4,Math.max(0,player.hp/player.maxHp*180),14);
+  cx.fillStyle='#1a90d9';cx.fillText('WEB',6,38);
+  cx.fillStyle='rgba(255,255,255,.15)';cx.fillRect(36,26,174,14);
+  cx.fillStyle='#1a90d9';cx.fillRect(36,26,Math.max(0,player.webFluid/player.maxWebFluid*174),14);
+  cx.fillStyle='#fff';cx.font='9px Arial';cx.fillText(currentMission.name,6,58);
+  cx.fillStyle='rgba(255,255,255,.5)';cx.font='9px Arial';cx.fillText(currentMission.objective,6,72);
+  cx.fillStyle='#f5c518';cx.font='bold 11px Arial';cx.fillText('COMBO: '+player.combo,6,96);
+  cx.fillStyle='rgba(255,255,255,.5)';cx.font='9px Arial';cx.fillText('SCORE: '+player.score,6,112);
+  vrHUDTex.needsUpdate=true;
+}
+
+// ── VR INPUT ──
+function updateVRInput(){
+  var session=renderer.xr.getSession();if(!session)return;
+  var dt=1/72;vrTurnCd-=dt;
+  var xrCam=renderer.xr.getCamera(camera);
+
+  session.inputSources.forEach(function(src){
+    if(!src.gamepad)return;
+    var gp=src.gamepad,left=src.handedness==='left',right=src.handedness==='right';
+    var sx=gp.axes.length>2?gp.axes[2]:(gp.axes[0]||0);
+    var sy=gp.axes.length>3?gp.axes[3]:(gp.axes[1]||0);
+
+    if(left&&player.alive){
+      // LEFT STICK = locomotion (head-relative direction)
+      var dz=0.18;
+      if(Math.abs(sx)>dz||Math.abs(sy)>dz){
+        var hq=xrCam.getWorldQuaternion(new THREE.Quaternion());
+        var he=new THREE.Euler().setFromQuaternion(hq,'YXZ');
+        var fw=new THREE.Vector3(-Math.sin(he.y),0,-Math.cos(he.y));
+        var rt=new THREE.Vector3(Math.cos(he.y),0,-Math.sin(he.y));
+        var mag=Math.min(1,Math.hypot(sx,sy));
+        var spd=webState.active?8*mag:5*mag;
+        var mv=new THREE.Vector3();
+        mv.addScaledVector(fw,-sy*spd*dt*60);
+        mv.addScaledVector(rt,sx*spd*dt*60);
+        player.vel.x+=mv.x;player.vel.z+=mv.z;
+      }
+
+      // LEFT GRIP = release web
+      var lg=gp.buttons[4]?gp.buttons[4].pressed:false;
+      if(lg&&!vrGrip0&&webState.active){releaseWeb();vrGrip0=true;}
+      if(!lg)vrGrip0=false;
+
+      // LEFT X BUTTON = TV remote menu
+      var xb=gp.buttons[3]?gp.buttons[3].pressed:false;
+      if(xb&&!vrGrip0){
+        showToast('📺 TV Remote: Use the right stick to select');
       }
     }
 
-    // Web anchor points on rooftop and sides
-    webAnchors.push(new THREE.Vector3(b.x, b.h+1, b.z));
-    webAnchors.push(new THREE.Vector3(b.x+b.w/2, b.h*0.7, b.z));
-    webAnchors.push(new THREE.Vector3(b.x-b.w/2, b.h*0.7, b.z));
-    webAnchors.push(new THREE.Vector3(b.x, b.h*0.7, b.z+b.d/2));
-    webAnchors.push(new THREE.Vector3(b.x, b.h*0.7, b.z-b.d/2));
+    if(right&&player.alive){
+      // RIGHT STICK = snap turn
+      if(Math.abs(sx)>0.65&&vrTurnCd<=0){
+        player.yaw+=sx>0?-Math.PI/4:Math.PI/4;vrTurnCd=0.28;
+      }
+
+      // RIGHT TRIGGER = SHOOT WEB (from controller direction)
+      var trig=gp.buttons[0]?gp.buttons[0].value:0;
+      if(trig>0.5&&!webState.active&&player.webFluid>0){
+        // Shoot web in direction right controller is pointing
+        var ctrlDir=new THREE.Vector3(0,0,-1).applyQuaternion(vrCtrl1.getWorldQuaternion(new THREE.Quaternion()));
+        var ctrlPos=vrCtrl1.getWorldPosition(new THREE.Vector3());
+
+        // Find anchor in controller direction
+        var best=null,bestScore=-Infinity;
+        webAnchors.forEach(function(a){
+          var toA=a.clone().sub(ctrlPos);
+          var dist=toA.length();
+          if(dist<5||dist>220)return;
+          var dot=ctrlDir.dot(toA.normalize());
+          if(dot<0.15)return;
+          var score=dot*100-dist*0.3+(a.y-ctrlPos.y)*0.5;
+          if(score>bestScore){bestScore=score;best=a;}
+        });
+        if(best){
+          webState.active=true;
+          webState.anchor=best.clone();
+          webState.length=player.pos.distanceTo(best)*0.9;
+          var impulse=best.clone().sub(player.pos).normalize().multiplyScalar(20);
+          impulse.y=Math.abs(impulse.y)+5;
+          player.vel.add(impulse);
+          player.swinging=true;
+          player.webFluid=Math.max(0,player.webFluid-8);
+          // Haptic pop on web attachment
+          if(gp.hapticActuators&&gp.hapticActuators[0])gp.hapticActuators[0].pulse(0.8,80);
+          // Draw web line
+          var geo=new THREE.BufferGeometry().setFromPoints([player.pos.clone(),best.clone()]);
+          webState.mesh=new THREE.Line(geo,new THREE.LineBasicMaterial({color:0xdddddd}));
+          scene.add(webState.mesh);webLines.push(webState.mesh);
+        }
+      }
+
+      // RIGHT GRIP = attack nearest enemy
+      var rg=gp.buttons[4]?gp.buttons[4].pressed:false;
+      if(rg&&!vrGrip1){
+        var nearest=null,nearDist=20;
+        villainInstances.forEach(function(v){
+          if(!v.alive)return;
+          var d=player.pos.distanceTo(v.pos);
+          if(d<nearDist){nearDist=d;nearest=v;}
+        });
+        if(nearest){
+          hitVillain(nearest,45);
+          if(gp.hapticActuators&&gp.hapticActuators[0])gp.hapticActuators[0].pulse(0.6,60);
+        }
+        vrGrip1=true;
+      }
+      if(!rg)vrGrip1=false;
+
+      // RIGHT B BUTTON = jump/boost
+      var bb=gp.buttons[5]?gp.buttons[5].pressed:false;
+      if(bb){
+        player.vel.y+=12;
+        if(gp.hapticActuators&&gp.hapticActuators[0])gp.hapticActuators[0].pulse(0.4,50);
+      }
+    }
   });
 
-  // ── SPECIAL APARTMENTS ──
-  buildPeterMJApartment();
-  buildMilesApartment();
-  buildUncleApartments();
-  buildStanLeeRoom();
+  // Sync camera rig
+  camPivot.position.set(player.pos.x,player.pos.y,player.pos.z);
+  camPivot.rotation.y=player.yaw;
 
-  // ── WATER TOWER PROPS ──
-  for(var i=0;i<30;i++){
-    var wx=(Math.random()-0.5)*800, wz=(Math.random()-0.5)*800;
-    var tower=new THREE.Mesh(new THREE.CylinderGeometry(1.5,2,5,10), new THREE.MeshLambertMaterial({color:0x4a3020}));
-    var nearBldg = buildings.reduce(function(best,b){ var d=Math.hypot(wx-b.x,wz-b.z); return d<best.d?{d:d,h:b.h}:best; },{d:99999,h:20});
-    tower.position.set(wx,nearBldg.h+3.5,wz);
-    scene.add(tower);
-    webAnchors.push(new THREE.Vector3(wx,nearBldg.h+6,wz));
-  }
-
-  // ── BRIDGES ──
-  buildBridge(-500, 0, 0, 1, 0); // Brooklyn Bridge
-  buildBridge(500, 0, 0, 1, 0);  // George Washington Bridge
-
-  // ── CENTRAL PARK ──
-  var parkMat=new THREE.MeshLambertMaterial({color:0x1a3a1a});
-  var park=new THREE.Mesh(new THREE.PlaneGeometry(120,180),parkMat);
-  park.rotation.x=-Math.PI/2; park.position.set(-50,0.1,220); scene.add(park);
-  // Trees in park
-  for(var i=0;i<40;i++){
-    var tx=-110+Math.random()*120, tz=140+Math.random()*160;
-    var th=6+Math.random()*8;
-    var tTrunk=new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.5,th,7),new THREE.MeshLambertMaterial({color:0x3a2010}));
-    tTrunk.position.set(tx,th/2,tz); scene.add(tTrunk);
-    var tLeaf=new THREE.Mesh(new THREE.ConeGeometry(3+Math.random()*2,5+Math.random()*3,8),new THREE.MeshLambertMaterial({color:0x1a5a1a}));
-    tLeaf.position.set(tx,th+2.5,tz); scene.add(tLeaf);
-  }
-}
-
-function buildBridge(x, y, z, scaleX, scaleZ){
-  var roadMat=new THREE.MeshLambertMaterial({color:0x333333});
-  var road=new THREE.Mesh(new THREE.BoxGeometry(200,1.5,16),roadMat);
-  road.position.set(x,y+30,z); scene.add(road);
-  // Cables
-  var cableMat=new THREE.MeshBasicMaterial({color:0x888888});
-  for(var i=-90;i<=90;i+=15){
-    var cable=new THREE.Mesh(new THREE.CylinderGeometry(0.15,0.15,30,5),cableMat);
-    cable.position.set(x+i,y+45,z); cable.rotation.z=0.1; scene.add(cable);
-    webAnchors.push(new THREE.Vector3(x+i,y+60,z));
-  }
-  // Towers
-  [-90,90].forEach(function(ox){
-    var tower=new THREE.Mesh(new THREE.BoxGeometry(4,50,4),new THREE.MeshLambertMaterial({color:0x444444}));
-    tower.position.set(x+ox,y+55,z); scene.add(tower);
-    webAnchors.push(new THREE.Vector3(x+ox,y+80,z));
-  });
-}
-
-function buildPeterMJApartment(){
-  var ax=-160, az=180, ah=40;
-  // Building (already added in main buildings array as apartment block)
-  // Interior marker — glowing window different color
-  var aptMat=new THREE.MeshLambertMaterial({color:0xffaa44,emissive:new THREE.Color(0x441100),transparent:true,opacity:0.8});
-  var aptWin=new THREE.Mesh(new THREE.PlaneGeometry(2.5,3.5),aptMat);
-  aptWin.position.set(ax-14,ah*0.6,az+11.02); scene.add(aptWin);
-  // Baby crib visible through window (tiny mesh)
-  var crib=new THREE.Mesh(new THREE.BoxGeometry(0.8,0.4,1.2),new THREE.MeshLambertMaterial({color:0xf5c518}));
-  crib.position.set(ax-13.5,ah*0.55,az+10.5); scene.add(crib);
-}
-
-function buildMilesApartment(){
-  var ax=160, az=180, ah=40;
-  var aptMat=new THREE.MeshLambertMaterial({color:0x44aaff,emissive:new THREE.Color(0x001144),transparent:true,opacity:0.8});
-  var aptWin=new THREE.Mesh(new THREE.PlaneGeometry(2.5,3.5),aptMat);
-  aptWin.position.set(ax+14,ah*0.7,az+11.02); scene.add(aptWin);
-}
-
-function buildUncleApartments(){
-  // Uncle Ben's house
-  var bh=new THREE.Mesh(new THREE.BoxGeometry(18,12,16),new THREE.MeshLambertMaterial({color:0x3a2a1a}));
-  bh.position.set(-380,6,250); scene.add(bh);
-  webAnchors.push(new THREE.Vector3(-380,13,250));
-  // Uncle Aaron
-  var ah=new THREE.Mesh(new THREE.BoxGeometry(16,10,14),new THREE.MeshLambertMaterial({color:0x2a1a2a}));
-  ah.position.set(380,5,250); scene.add(ah);
-  webAnchors.push(new THREE.Vector3(380,11,250));
-}
-
-function buildStanLeeRoom(){
-  // Stan Lee's cameo spot — a newsstand near Times Square
-  var stand=new THREE.Mesh(new THREE.BoxGeometry(4,3,3),new THREE.MeshLambertMaterial({color:0x3a2010}));
-  stand.position.set(5,1.5,5); scene.add(stand);
-  // Stan Lee character hint — glowing exclamation
-  var sign=new THREE.Mesh(new THREE.PlaneGeometry(1.5,1.5),new THREE.MeshBasicMaterial({color:0xf5c518}));
-  sign.position.set(5,4.5,6.6); scene.add(sign);
+  // Update VR HUD every frame
+  updateVRHUD();
 }
